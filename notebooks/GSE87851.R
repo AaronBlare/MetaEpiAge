@@ -27,28 +27,24 @@ arraytype <- '450K'
 # Setting path
 # Directory must contain *.idat files and *.csv file with phenotype
 ###############################################
-path <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE87571/raw/idat"
-setwd(path)
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE87571/raw/idat"
+path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
+path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
+path_work <- path_data
+setwd(path_work)
+
 
 ###############################################
-# Load CpG lists and annotations
+# Load annotations
 ###############################################
 ann450k <- getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19)
-cpgs_horvath_old <- read.csv(
-  "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/cpgs_horvath_calculator.csv",
-  header=TRUE
-)$CpG
-cpgs_horvath_new <- read.csv(
-  "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/datMiniAnnotation4_fixed.csv",
-  header=TRUE
-)$Name
-
 
 ###############################################
 # Import and filtration
 ###############################################
 myLoad <- champ.load(
-  directory = path,
+  directory = path_data,
   arraytype = arraytype,
   method = "minfi",
   methValue = "B",
@@ -74,6 +70,14 @@ myNorm <- getBeta(preprocessFunnorm(myLoad$rgSet))
 ###############################################
 # Create data for Horvath's calculator
 ###############################################
+cpgs_horvath_old <- read.csv(
+  paste(path_horvath, "/cpgs_horvath_calculator.csv", sep=""),
+  header=TRUE
+)$CpG
+cpgs_horvath_new <- read.csv(
+  paste(path_horvath, "/datMiniAnnotation4_fixed.csv", sep=""),
+  header=TRUE
+)$Name
 cpgs_horvath <- intersect(cpgs_horvath_old, rownames(myNorm))
 cpgs_missed <- setdiff(cpgs_horvath_old, rownames(myNorm))
 betas_missed <- matrix(data='NA', nrow=length(cpgs_missed), dim(myNorm)[2])
@@ -96,6 +100,7 @@ pheno_horvath <- data.frame(
 )
 pheno_horvath['Female'] <- 1
 pheno_horvath[pheno_horvath$Sex == 'M', 'Female'] <- 0
+pheno_horvath$Age <- as.numeric(pheno_horvath$Age)
 rownames(pheno_horvath) <- rownames(myLoad$pd)
 pheno_horvath <- data.frame(row.names(pheno_horvath), pheno_horvath[ ,!(names(pheno_horvath) %in% c("Sex"))])
 colnames(pheno_horvath)[1] <- "Sample_Name"
@@ -120,7 +125,6 @@ myLoad$pd['DunedinPACE'] <- pace$DunedinPACE
 # 3) CalcAllPCClocks.RData (very big file but it is nesessary)
 # You also need to apply changes from this issue: https://github.com/MorganLevineLab/PC-Clocks/issues/10
 ###############################################
-path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
 source(paste(path_pc_clocks, "run_calcPCClocks.R", sep = ""))
 source(paste(path_pc_clocks, "run_calcPCClocks_Accel.R", sep = ""))
 pheno <- data.frame(
@@ -129,6 +133,7 @@ pheno <- data.frame(
   'Tissue' = myLoad$pd$Tissue
 )
 pheno['Female'] <- 1
+pheno$Age <- as.numeric(pheno$Age)
 pheno[pheno$Sex == 'M', 'Female'] <- 0
 pc_clocks <- calcPCClocks(
   path_to_PCClocks_directory = path_pc_clocks,
@@ -152,5 +157,4 @@ write.csv(myLoad$pd, file = "pheno.csv")
 mvals <- logit2(myNorm)
 mvals <- data.frame(rownames(mvals), mvals)
 colnames(mvals)[1] <- "ID_REF"
-path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
 mvals_norm <- regRCPqn(M_data=mvals, ref_path=path_harm_ref, data_name=dataset, save_ref=TRUE)
