@@ -1,0 +1,156 @@
+rm(list=ls())
+
+###############################################
+# Installing packages
+###############################################
+if (!requireNamespace("BiocManager", quietly=TRUE))
+  install.packages("BiocManager")
+BiocManager::install("ChAMP")
+BiocManager::install("methylGSA")
+BiocManager::install("preprocessCore")
+install.packages("devtools")
+devtools::install_github("danbelsky/DunedinPACE")
+devtools::install_github("https://github.com/regRCPqn/regRCPqn")
+library("ChAMP")
+library("preprocessCore")
+library("DunedinPACE")
+library("regRCPqn")
+
+
+###############################################
+# Setting variables
+###############################################
+dataset <- 'GSE87571'
+arraytype <- '450K'
+
+###############################################
+# Setting path
+# Directory must contain *.idat files and *.csv file with phenotype
+###############################################
+path <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE87571/raw/idat"
+setwd(path)
+
+###############################################
+# Load CpG lists and annotations
+###############################################
+ann450k <- getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19)
+cpgs_horvath_old <- read.csv(
+  "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/cpgs_horvath_calculator.csv",
+  header=TRUE
+)$CpG
+cpgs_horvath_new <- read.csv(
+  "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/datMiniAnnotation4_fixed.csv",
+  header=TRUE
+)$Name
+
+
+###############################################
+# Import and filtration
+###############################################
+myLoad <- champ.load(
+  directory = path,
+  arraytype = arraytype,
+  method = "minfi",
+  methValue = "B",
+  autoimpute = TRUE,
+  filterDetP = TRUE,
+  ProbeCutoff = 0.1,
+  SampleCutoff = 0.1,
+  detPcut = 0.01,
+  filterBeads = FALSE,
+  beadCutoff = 0.05,
+  filterNoCG = FALSE,
+  filterSNPs = FALSE,
+  filterMultiHit = FALSE,
+  filterXY = FALSE,
+  force = TRUE
+)
+
+###############################################
+# Functional normalization
+###############################################
+myNorm <- getBeta(preprocessFunnorm(myLoad$rgSet))
+
+###############################################
+# Create data for Horvath's calculator
+###############################################
+cpgs_horvath <- intersect(cpgs_horvath_old, rownames(myNorm))
+cpgs_missed <- setdiff(cpgs_horvath_old, rownames(myNorm))
+betas_missed <- matrix(data='NA', nrow=length(cpgs_missed), dim(myNorm)[2])
+rownames(betas_missed) <- cpgs_missed
+colnames(betas_missed) <- colnames(myNorm)
+betas_horvath <- rbind(myNorm[cpgs_horvath, ], betas_missed)
+betas_horvath <- data.frame(row.names(betas_horvath), betas_horvath)
+colnames(betas_horvath)[1] <- "ProbeID"
+write.csv(
+  betas_horvath,
+  file="betas_horvath.csv",
+  row.names=FALSE,
+  quote=FALSE
+)
+
+pheno_horvath <- data.frame(
+  'Sex' = myLoad$pd$Sex,
+  'Age' = myLoad$pd$Age,
+  'Tissue' = myLoad$pd$Tissue
+)
+pheno_horvath['Female'] <- 1
+pheno_horvath[pheno_horvath$Sex == 'M', 'Female'] <- 0
+rownames(pheno_horvath) <- rownames(myLoad$pd)
+pheno_horvath <- data.frame(row.names(pheno_horvath), pheno_horvath[ ,!(names(pheno_horvath) %in% c("Sex"))])
+colnames(pheno_horvath)[1] <- "Sample_Name"
+write.csv(
+  pheno_horvath,
+  file="pheno_horvath.csv",
+  row.names=FALSE,
+  quote=FALSE
+)
+
+###############################################
+# DunedinPACE
+###############################################
+pace <- PACEProjector(myNorm)
+myLoad$pd['DunedinPACE'] <- pace$DunedinPACE
+
+###############################################
+# PC clocks
+# You need to setup path to 3 files from original repository (https://github.com/MorganLevineLab/PC-Clocks):
+# 1) run_calcPCClocks.R
+# 2) run_calcPCClocks_Accel.R
+# 3) CalcAllPCClocks.RData (very big file but it is nesessary)
+# You also need to apply changes from this issue: https://github.com/MorganLevineLab/PC-Clocks/issues/10
+###############################################
+path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+source(paste(path_pc_clocks, "run_calcPCClocks.R", sep = ""))
+source(paste(path_pc_clocks, "run_calcPCClocks_Accel.R", sep = ""))
+pheno <- data.frame(
+  'Sex' = myLoad$pd$Sex,
+  'Age' = myLoad$pd$Age,
+  'Tissue' = myLoad$pd$Tissue
+)
+pheno['Female'] <- 1
+pheno[pheno$Sex == 'M', 'Female'] <- 0
+pc_clocks <- calcPCClocks(
+  path_to_PCClocks_directory = path_pc_clocks,
+  datMeth = t(myNorm),
+  datPheno = pheno
+)
+pc_clocks <- calcPCClocks_Accel(pc_clocks)
+pc_ages <- list("PCHorvath1", "PCHorvath2", "PCHannum", "PCHannum", "PCPhenoAge", "PCGrimAge")
+for (pc_age in pc_ages) {
+  myLoad$pd[rownames(myLoad$pd), pc_age] <- pc_clocks[rownames(myLoad$pd), pc_age]
+}
+
+###############################################
+# Save modified pheno
+###############################################
+write.csv(myLoad$pd, file = "pheno.csv")
+
+###############################################
+# Create harmonization reference
+###############################################
+mvals <- logit2(myNorm)
+mvals <- data.frame(rownames(mvals), mvals)
+colnames(mvals)[1] <- "ID_REF"
+path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
+mvals_norm <- regRCPqn(M_data=mvals, ref_path=path_harm_ref, data_name=dataset, save_ref=TRUE)
