@@ -9,6 +9,7 @@ BiocManager::install("ChAMP")
 BiocManager::install("methylGSA")
 BiocManager::install("preprocessCore")
 install.packages("devtools")
+install.packages("splitstackshape")
 devtools::install_github("danbelsky/DunedinPACE")
 devtools::install_github("https://github.com/regRCPqn/regRCPqn")
 library("ChAMP")
@@ -16,12 +17,13 @@ library("preprocessCore")
 library("DunedinPACE")
 library("regRCPqn")
 library(readxl)
+library(splitstackshape)
 
 
 ###############################################
 # Setting variables
 ###############################################
-dataset <- 'GSE84727'
+dataset <- 'GSE80417'
 arraytype <- '450K'
 
 dataset_ref <- 'GSE87571'
@@ -29,11 +31,11 @@ dataset_ref <- 'GSE87571'
 ###############################################
 # Setting path
 ###############################################
-path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE84727/raw"
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE80417/raw"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
 path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
 path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
-path_work <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE84727"
+path_work <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE80417"
 setwd(path_work)
 
 ###############################################
@@ -45,10 +47,10 @@ ann450k <- getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 # Import data
 ###############################################
 pd <- as.data.frame(read_excel(paste(path_data,"/controls.xlsx", sep="")))
-pd$sentrixids <- paste0('X', pd$sentrixids)
+pd$sentrixids <- paste0('X', pd$description)
 row.names(pd) <- pd$sentrixids
 
-betas <- read.csv(paste(path_data,"/GSE84727_normalisedBetas.csv", sep=""))
+betas <- as.data.frame(read.csv(paste(path_data,"/GSE80417_normalizedBetas.csv", sep="")))
 rownames(betas) <- betas$X
 betas <- betas[, pd$sentrixids]
 
