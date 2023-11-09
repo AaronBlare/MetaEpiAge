@@ -23,7 +23,7 @@ library(splitstackshape)
 ###############################################
 # Setting variables
 ###############################################
-dataset <- 'GSE42861'
+dataset <- 'GSE111629'
 arraytype <- '450K'
 
 dataset_ref <- 'GSE87571'
@@ -31,7 +31,7 @@ dataset_ref <- 'GSE87571'
 ###############################################
 # Setting path
 ###############################################
-path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE42861/raw/idat"
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE111629/raw/idat"
 path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
 path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
@@ -42,7 +42,6 @@ setwd(path_work)
 # Load annotations
 ###############################################
 ann450k <- getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19)
-
 
 ###############################################
 # Import and filtration
@@ -65,7 +64,7 @@ myLoad <- champ.load(
   filterXY = FALSE,
   force = TRUE
 )
-pd <- as.data.frame(myLoad$pd)
+pd <-  as.data.frame(myLoad$pd)
 
 ###############################################
 # Functional normalization

@@ -23,7 +23,7 @@ library(splitstackshape)
 ###############################################
 # Setting variables
 ###############################################
-dataset <- 'GSE42861'
+dataset <- 'GSE40279'
 arraytype <- '450K'
 
 dataset_ref <- 'GSE87571'
@@ -31,11 +31,11 @@ dataset_ref <- 'GSE87571'
 ###############################################
 # Setting path
 ###############################################
-path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE42861/raw/idat"
-path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE40279/raw"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
 path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
-path_work <- path_data
+path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_work <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE40279"
 setwd(path_work)
 
 ###############################################
@@ -43,34 +43,15 @@ setwd(path_work)
 ###############################################
 ann450k <- getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 
+###############################################
+# Import data
+###############################################
+pd <- as.data.frame(read_excel(paste(path_data,"/controls.xlsx", sep="")))
+row.names(pd) <- pd$source_name_ch1
 
-###############################################
-# Import and filtration
-###############################################
-myLoad <- champ.load(
-  directory = path_data,
-  arraytype = arraytype,
-  method = "minfi",
-  methValue = "B",
-  autoimpute = TRUE,
-  filterDetP = TRUE,
-  ProbeCutoff = 0.1,
-  SampleCutoff = 0.1,
-  detPcut = 0.01,
-  filterBeads = FALSE,
-  beadCutoff = 0.05,
-  filterNoCG = FALSE,
-  filterSNPs = FALSE,
-  filterMultiHit = FALSE,
-  filterXY = FALSE,
-  force = TRUE
-)
-pd <- as.data.frame(myLoad$pd)
-
-###############################################
-# Functional normalization
-###############################################
-betas <- getBeta(preprocessFunnorm(myLoad$rgSet))
+betas <- as.data.frame(read.table(paste(path_data,"/GSE40279_average_beta.txt", sep=""), header=TRUE))
+rownames(betas) <- betas$ID_REF
+betas <- betas[, row.names(pd)]
 
 ###############################################
 # Harmonization

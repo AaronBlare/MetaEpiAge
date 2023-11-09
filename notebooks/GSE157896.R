@@ -23,7 +23,7 @@ library(splitstackshape)
 ###############################################
 # Setting variables
 ###############################################
-dataset <- 'GSE42861'
+dataset <- 'GSE157896'
 arraytype <- '450K'
 
 dataset_ref <- 'GSE87571'
@@ -31,7 +31,7 @@ dataset_ref <- 'GSE87571'
 ###############################################
 # Setting path
 ###############################################
-path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE42861/raw/idat"
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE157896/raw/idat"
 path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
 path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
@@ -65,7 +65,7 @@ myLoad <- champ.load(
   filterXY = FALSE,
   force = TRUE
 )
-pd <- as.data.frame(myLoad$pd)
+pd <-  as.data.frame(myLoad$pd)
 
 ###############################################
 # Functional normalization
@@ -91,25 +91,40 @@ betas <- ilogit2(mvals)
 ###############################################
 source(paste(path_pc_clocks, "run_calcPCClocks.R", sep = ""))
 source(paste(path_pc_clocks, "run_calcPCClocks_Accel.R", sep = ""))
-pheno <- data.frame(
-  'Sex' = pd$Sex,
-  'Age' = pd$Age,
-  'Tissue' = pd$Tissue
-)
-pheno['Female'] <- 1
-pheno$Age <- as.numeric(pheno$Age)
-pheno[pheno$Sex == 'M', 'Female'] <- 0
-rownames(pheno) <- rownames(pd)
-pc_clocks <- calcPCClocks(
-  path_to_PCClocks_directory = path_pc_clocks,
-  datMeth = t(betas),
-  datPheno = pheno,
-  column_check = "skip"
-)
-pc_clocks <- calcPCClocks_Accel(pc_clocks)
-pc_ages <- list("PCHorvath1", "PCHorvath2", "PCHannum", "PCHannum", "PCPhenoAge", "PCGrimAge")
-for (pc_age in pc_ages) {
-  pd[rownames(pd), pc_age] <- pc_clocks[rownames(pd), pc_age]
+
+# PC clock calculation is too slow for big datasets. We will split data to chunks
+samples_all <- row.names(pd)
+n_chunk <- 100
+chunk_begin <- 1
+
+while (chunk_begin < length(samples_all)){
+  print(chunk_begin)
+  chunk_end <- chunk_begin + n_chunk
+  samples_curr <- samples_all[chunk_begin:min((chunk_end-1), length(samples_all))]
+  pd_curr <- pd[samples_curr, ]
+  betas_curr <- betas[, samples_curr]
+
+  pheno <- data.frame(
+    'Sex' = pd_curr$Sex,
+    'Age' = pd_curr$Age,
+    'Tissue' = pd_curr$Tissue
+  )
+  pheno['Female'] <- 1
+  pheno$Age <- as.numeric(pheno$Age)
+  pheno[pheno$Sex == 'M', 'Female'] <- 0
+  rownames(pheno) <- rownames(pd_curr)
+  pc_clocks <- calcPCClocks(
+    path_to_PCClocks_directory = path_pc_clocks,
+    datMeth = t(betas_curr),
+    datPheno = pheno,
+    column_check = "skip"
+  )
+  pc_clocks <- calcPCClocks_Accel(pc_clocks)
+  pc_ages <- list("PCHorvath1", "PCHorvath2", "PCHannum", "PCHannum", "PCPhenoAge", "PCGrimAge")
+  for (pc_age in pc_ages) {
+    pd[rownames(pd_curr), pc_age] <- pc_clocks[rownames(pd_curr), pc_age]
+  }
+  chunk_begin <- chunk_begin + n_chunk
 }
 
 ###############################################

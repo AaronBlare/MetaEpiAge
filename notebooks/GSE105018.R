@@ -10,6 +10,7 @@ BiocManager::install("methylGSA")
 BiocManager::install("preprocessCore")
 install.packages("devtools")
 install.packages("splitstackshape")
+install.packages('reticulate')
 devtools::install_github("danbelsky/DunedinPACE")
 devtools::install_github("https://github.com/regRCPqn/regRCPqn")
 library("ChAMP")
@@ -18,12 +19,13 @@ library("DunedinPACE")
 library("regRCPqn")
 library(readxl)
 library(splitstackshape)
-
+library("reticulate")
+pandas <- import("pandas")
 
 ###############################################
 # Setting variables
 ###############################################
-dataset <- 'GSE42861'
+dataset <- 'GSE105018'
 arraytype <- '450K'
 
 dataset_ref <- 'GSE87571'
@@ -31,11 +33,11 @@ dataset_ref <- 'GSE87571'
 ###############################################
 # Setting path
 ###############################################
-path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE42861/raw/idat"
-path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE105018/raw"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
 path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
-path_work <- path_data
+path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_work <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE105018"
 setwd(path_work)
 
 ###############################################
@@ -43,34 +45,17 @@ setwd(path_work)
 ###############################################
 ann450k <- getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 
-
 ###############################################
-# Import and filtration
+# Import data
 ###############################################
-myLoad <- champ.load(
-  directory = path_data,
-  arraytype = arraytype,
-  method = "minfi",
-  methValue = "B",
-  autoimpute = TRUE,
-  filterDetP = TRUE,
-  ProbeCutoff = 0.1,
-  SampleCutoff = 0.1,
-  detPcut = 0.01,
-  filterBeads = FALSE,
-  beadCutoff = 0.05,
-  filterNoCG = FALSE,
-  filterSNPs = FALSE,
-  filterMultiHit = FALSE,
-  filterXY = FALSE,
-  force = TRUE
-)
-pd <- as.data.frame(myLoad$pd)
-
-###############################################
-# Functional normalization
-###############################################
-betas <- getBeta(preprocessFunnorm(myLoad$rgSet))
+pd <- as.data.frame(read_excel(paste(path_data,"/controls.xlsx", sep="")))
+sentrixids <- cSplit(pd, "title", " ")
+pd$sentrixids <- sentrixids$title_6
+row.names(pd) <- pd$sentrixids
+betas <- pandas$read_pickle(paste(path_data, "/betas.pkl", sep=''))
+missed_in_betas <- setdiff(row.names(pd), colnames(betas))
+missed_in_pheno <- setdiff(colnames(betas), row.names(pd))
+betas <- betas[, row.names(pd)]
 
 ###############################################
 # Harmonization
@@ -80,6 +65,7 @@ mvals <- data.frame(rownames(mvals), mvals)
 colnames(mvals)[1] <- "ID_REF"
 mvals <- regRCPqnREF(M_data=mvals, ref_path=path_harm_ref, data_name=dataset_ref)
 betas <- ilogit2(mvals)
+row.names(pd) <- paste0('X', row.names(pd))
 
 ###############################################
 # PC clocks
@@ -91,25 +77,40 @@ betas <- ilogit2(mvals)
 ###############################################
 source(paste(path_pc_clocks, "run_calcPCClocks.R", sep = ""))
 source(paste(path_pc_clocks, "run_calcPCClocks_Accel.R", sep = ""))
-pheno <- data.frame(
-  'Sex' = pd$Sex,
-  'Age' = pd$Age,
-  'Tissue' = pd$Tissue
-)
-pheno['Female'] <- 1
-pheno$Age <- as.numeric(pheno$Age)
-pheno[pheno$Sex == 'M', 'Female'] <- 0
-rownames(pheno) <- rownames(pd)
-pc_clocks <- calcPCClocks(
-  path_to_PCClocks_directory = path_pc_clocks,
-  datMeth = t(betas),
-  datPheno = pheno,
-  column_check = "skip"
-)
-pc_clocks <- calcPCClocks_Accel(pc_clocks)
-pc_ages <- list("PCHorvath1", "PCHorvath2", "PCHannum", "PCHannum", "PCPhenoAge", "PCGrimAge")
-for (pc_age in pc_ages) {
-  pd[rownames(pd), pc_age] <- pc_clocks[rownames(pd), pc_age]
+
+# PC clock calculation is too slow for big datasets. We will split data to chunks
+samples_all <- row.names(pd)
+n_chunk <- 100
+chunk_begin <- 1
+
+while (chunk_begin < length(samples_all)){
+  print(chunk_begin)
+  chunk_end <- chunk_begin + n_chunk
+  samples_curr <- samples_all[chunk_begin:min((chunk_end-1), length(samples_all))]
+  pd_curr <- pd[samples_curr, ]
+  betas_curr <- betas[, samples_curr]
+
+  pheno <- data.frame(
+    'Sex' = pd_curr$Sex,
+    'Age' = pd_curr$Age,
+    'Tissue' = pd_curr$Tissue
+  )
+  pheno['Female'] <- 1
+  pheno$Age <- as.numeric(pheno$Age)
+  pheno[pheno$Sex == 'M', 'Female'] <- 0
+  rownames(pheno) <- rownames(pd_curr)
+  pc_clocks <- calcPCClocks(
+    path_to_PCClocks_directory = path_pc_clocks,
+    datMeth = t(betas_curr),
+    datPheno = pheno,
+    column_check = "skip"
+  )
+  pc_clocks <- calcPCClocks_Accel(pc_clocks)
+  pc_ages <- list("PCHorvath1", "PCHorvath2", "PCHannum", "PCHannum", "PCPhenoAge", "PCGrimAge")
+  for (pc_age in pc_ages) {
+    pd[rownames(pd_curr), pc_age] <- pc_clocks[rownames(pd_curr), pc_age]
+  }
+  chunk_begin <- chunk_begin + n_chunk
 }
 
 ###############################################

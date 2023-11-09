@@ -89,7 +89,8 @@ rownames(pheno) <- rownames(pd)
 pc_clocks <- calcPCClocks(
   path_to_PCClocks_directory = path_pc_clocks,
   datMeth = t(betas),
-  datPheno = pheno
+  datPheno = pheno,
+  column_check = "skip"
 )
 pc_clocks <- calcPCClocks_Accel(pc_clocks)
 pc_ages <- list("PCHorvath1", "PCHorvath2", "PCHannum", "PCHannum", "PCPhenoAge", "PCGrimAge")
