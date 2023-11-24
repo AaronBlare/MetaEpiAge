@@ -65,6 +65,7 @@ mvals <- data.frame(rownames(mvals), mvals)
 colnames(mvals)[1] <- "ID_REF"
 mvals <- regRCPqnREF(M_data=mvals, ref_path=path_harm_ref, data_name=dataset_ref)
 betas <- ilogit2(mvals)
+rownames(pd) <- paste0('X', rownames(pd))
 
 ###############################################
 # PC clocks
