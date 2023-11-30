@@ -10,6 +10,7 @@ BiocManager::install("methylGSA")
 BiocManager::install("preprocessCore")
 install.packages("devtools")
 install.packages("splitstackshape")
+install.packages('reticulate')
 devtools::install_github("danbelsky/DunedinPACE")
 devtools::install_github("https://github.com/regRCPqn/regRCPqn")
 library("ChAMP")
@@ -18,12 +19,13 @@ library("DunedinPACE")
 library("regRCPqn")
 library(readxl)
 library(splitstackshape)
-
+library("reticulate")
+pandas <- import("pandas")
 
 ###############################################
 # Setting variables
 ###############################################
-dataset <- 'GSE74193'
+dataset <- 'GSE106648'
 arraytype <- '450K'
 
 dataset_ref <- 'GSE87571'
@@ -31,40 +33,22 @@ dataset_ref <- 'GSE87571'
 ###############################################
 # Setting path
 ###############################################
-path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE74193/raw/idat"
-path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE106648/raw"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
 path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
-path_work <- path_data
+path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_work <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE106648"
 setwd(path_work)
 
 ###############################################
-# Import and filtration
+# Import data
 ###############################################
-myLoad <- champ.load(
-  directory = path_data,
-  arraytype = arraytype,
-  method = "minfi",
-  methValue = "B",
-  autoimpute = TRUE,
-  filterDetP = TRUE,
-  ProbeCutoff = 0.1,
-  SampleCutoff = 0.1,
-  detPcut = 0.01,
-  filterBeads = FALSE,
-  beadCutoff = 0.05,
-  filterNoCG = FALSE,
-  filterSNPs = FALSE,
-  filterMultiHit = FALSE,
-  filterXY = FALSE,
-  force = TRUE
-)
-pd <-  as.data.frame(myLoad$pd)
-
-###############################################
-# Functional normalization
-###############################################
-betas <- getBeta(preprocessFunnorm(myLoad$rgSet))
+pd <- as.data.frame(read_excel(paste(path_data,"/controls.xlsx", sep="")))
+row.names(pd) <- pd$gsm
+betas <- pandas$read_pickle(paste(path_data, "/betas.pkl", sep=''))
+missed_in_betas <- setdiff(row.names(pd), colnames(betas))
+missed_in_pheno <- setdiff(colnames(betas), row.names(pd))
+betas <- betas[, row.names(pd)]
 
 ###############################################
 # Harmonization

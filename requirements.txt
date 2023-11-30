@@ -1,5 +1,21 @@
 GEOparse
+
+# Data Processing =========================================================== #
 pandas
+numpy
+scipy
+statsmodels
+sklearn
+
+# Plots ===================================================================== #
+seaborn
+plotly
+matplotlib
+statannotations
+patchworklib
+
+# Utils ===================================================================== #
+tqdm
 
 
 

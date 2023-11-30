@@ -57,6 +57,8 @@ betas <- betas[ , col_odd == 0]
 missed_in_betas <- setdiff(row.names(pd), colnames(betas))
 missed_in_pheno <- setdiff(colnames(betas), row.names(pd))
 betas <- betas[, rownames(pd)]
+cpgs_common <- intersect(rownames(betas), rownames(ann450k))
+betas <- betas[cpgs_common, ]
 
 ###############################################
 # Harmonization
@@ -144,7 +146,41 @@ write.csv(
 
 ###############################################
 # DunedinPACE
+# This dataset contains many missing values, which will be imputed from reference dataset GSE87571
 ###############################################
+path_ref <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE87571/raw/idat"
+load_ref <- champ.load(
+  directory = path_ref,
+  arraytype = '450K',
+  method = "minfi",
+  methValue = "B",
+  autoimpute = TRUE,
+  filterDetP = TRUE,
+  ProbeCutoff = 0.1,
+  SampleCutoff = 0.1,
+  detPcut = 0.01,
+  filterBeads = FALSE,
+  beadCutoff = 0.05,
+  filterNoCG = FALSE,
+  filterSNPs = FALSE,
+  filterMultiHit = FALSE,
+  filterXY = FALSE,
+  force = TRUE
+)
+betas_ref <- getBeta(preprocessFunnorm(load_ref$rgSet))
+cpgs_to_fill <- setdiff(rownames(betas_ref), rownames(betas))
+betas[cpgs_to_fill, ] <- 0
+values_to_fill <- apply(betas_ref, 1, median, na.rm=T)
+values_to_fill <- data.frame(values_to_fill)
+
+n_filled_samples <- 0
+for (sample_id in colnames(betas)) {
+  betas[cpgs_to_fill, sample_id] <- values_to_fill[cpgs_to_fill, 'values_to_fill']
+  n_filled_samples <- n_filled_samples + 1
+  print(n_filled_samples)
+}
+
+
 pace <- PACEProjector(betas)
 pd['DunedinPACE'] <- pace$DunedinPACE
 
