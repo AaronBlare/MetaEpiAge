@@ -53,7 +53,7 @@ sentrixids <- cSplit(pd, "title", " ")
 sentrixids$title_2 <- gsub("[][]","", as.character(sentrixids$title_2))
 pd$sentrixids <- paste0('X', sentrixids$title_2)
 row.names(pd) <- pd$sentrixids
-betas <- as.data.frame(read.table(paste(path_data,"/GSE207927_Processed_Beta_Matrix.txt", sep=""), header=TRUE))
+betas <- as.data.frame(read.table(paste(path_data,"/GSE207927_Raw_Beta_Matrix.txt", sep=""), header=TRUE))
 missed_in_betas <- setdiff(row.names(pd), colnames(betas))
 missed_in_pheno <- setdiff(colnames(betas), row.names(pd))
 betas <- betas[, row.names(pd)]

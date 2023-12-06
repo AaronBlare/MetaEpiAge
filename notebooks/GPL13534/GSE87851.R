@@ -30,15 +30,9 @@ arraytype <- '450K'
 path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE87571/raw/idat"
 path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
-path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
+path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/check/"
 path_work <- path_data
 setwd(path_work)
-
-
-###############################################
-# Load annotations
-###############################################
-ann450k <- getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 
 ###############################################
 # Import and filtration
@@ -61,61 +55,21 @@ myLoad <- champ.load(
   filterXY = FALSE,
   force = TRUE
 )
+pd <-  as.data.frame(myLoad$pd)
 
 ###############################################
 # Functional normalization
 ###############################################
-myNorm <- getBeta(preprocessFunnorm(myLoad$rgSet))
+betas <- getBeta(preprocessFunnorm(myLoad$rgSet))
 
 ###############################################
-# Create data for Horvath's calculator
+# Create harmonization reference
 ###############################################
-cpgs_horvath_old <- read.csv(
-  paste(path_horvath, "/cpgs_horvath_calculator.csv", sep=""),
-  header=TRUE
-)$CpG
-cpgs_horvath_new <- read.csv(
-  paste(path_horvath, "/datMiniAnnotation4_fixed.csv", sep=""),
-  header=TRUE
-)$Name
-cpgs_horvath <- intersect(cpgs_horvath_old, rownames(myNorm))
-cpgs_missed <- setdiff(cpgs_horvath_old, rownames(myNorm))
-betas_missed <- matrix(data='NA', nrow=length(cpgs_missed), dim(myNorm)[2])
-rownames(betas_missed) <- cpgs_missed
-colnames(betas_missed) <- colnames(myNorm)
-betas_horvath <- rbind(myNorm[cpgs_horvath, ], betas_missed)
-betas_horvath <- data.frame(row.names(betas_horvath), betas_horvath)
-colnames(betas_horvath)[1] <- "ProbeID"
-write.csv(
-  betas_horvath,
-  file="betas_horvath.csv",
-  row.names=FALSE,
-  quote=FALSE
-)
-
-pheno_horvath <- data.frame(
-  'Sex' = myLoad$pd$Sex,
-  'Age' = myLoad$pd$Age,
-  'Tissue' = myLoad$pd$Tissue
-)
-pheno_horvath['Female'] <- 1
-pheno_horvath[pheno_horvath$Sex == 'M', 'Female'] <- 0
-pheno_horvath$Age <- as.numeric(pheno_horvath$Age)
-rownames(pheno_horvath) <- rownames(myLoad$pd)
-pheno_horvath <- data.frame(row.names(pheno_horvath), pheno_horvath[ ,!(names(pheno_horvath) %in% c("Sex"))])
-colnames(pheno_horvath)[1] <- "Sample_Name"
-write.csv(
-  pheno_horvath,
-  file="pheno_horvath.csv",
-  row.names=FALSE,
-  quote=FALSE
-)
-
-###############################################
-# DunedinPACE
-###############################################
-pace <- PACEProjector(myNorm)
-myLoad$pd['DunedinPACE'] <- pace$DunedinPACE
+mvals <- logit2(betas)
+mvals <- data.frame(rownames(mvals), mvals)
+colnames(mvals)[1] <- "ID_REF"
+mvals <- regRCPqn(M_data=mvals, ref_path=path_harm_ref, data_name=dataset, save_ref=TRUE)
+betas <- ilogit2(mvals)
 
 ###############################################
 # PC clocks
@@ -128,34 +82,77 @@ myLoad$pd['DunedinPACE'] <- pace$DunedinPACE
 source(paste(path_pc_clocks, "run_calcPCClocks.R", sep = ""))
 source(paste(path_pc_clocks, "run_calcPCClocks_Accel.R", sep = ""))
 pheno <- data.frame(
-  'Sex' = myLoad$pd$Sex,
-  'Age' = myLoad$pd$Age,
-  'Tissue' = myLoad$pd$Tissue
+  'Sex' = pd$Sex,
+  'Age' = pd$Age,
+  'Tissue' = pd$Tissue
 )
 pheno['Female'] <- 1
 pheno$Age <- as.numeric(pheno$Age)
 pheno[pheno$Sex == 'M', 'Female'] <- 0
+rownames(pheno) <- rownames(pd)
 pc_clocks <- calcPCClocks(
   path_to_PCClocks_directory = path_pc_clocks,
-  datMeth = t(myNorm),
+  datMeth = t(betas),
   datPheno = pheno,
   column_check = "skip"
 )
 pc_clocks <- calcPCClocks_Accel(pc_clocks)
 pc_ages <- list("PCHorvath1", "PCHorvath2", "PCHannum", "PCHannum", "PCPhenoAge", "PCGrimAge")
 for (pc_age in pc_ages) {
-  myLoad$pd[rownames(myLoad$pd), pc_age] <- pc_clocks[rownames(myLoad$pd), pc_age]
+  pd[rownames(pd), pc_age] <- pc_clocks[rownames(pd), pc_age]
 }
+
+###############################################
+# Create data for Horvath's calculator
+###############################################
+cpgs_horvath_old <- read.csv(
+  paste(path_horvath, "/cpgs_horvath_calculator.csv", sep=""),
+  header=TRUE
+)$CpG
+cpgs_horvath_new <- read.csv(
+  paste(path_horvath, "/datMiniAnnotation4_fixed.csv", sep=""),
+  header=TRUE
+)$Name
+cpgs_horvath <- intersect(cpgs_horvath_old, rownames(betas))
+cpgs_missed <- setdiff(cpgs_horvath_old, rownames(betas))
+betas_missed <- matrix(data='NA', nrow=length(cpgs_missed), dim(betas)[2])
+rownames(betas_missed) <- cpgs_missed
+colnames(betas_missed) <- colnames(betas)
+betas_horvath <- rbind(betas[cpgs_horvath, ], betas_missed)
+betas_horvath <- data.frame(row.names(betas_horvath), betas_horvath)
+colnames(betas_horvath)[1] <- "ProbeID"
+write.csv(
+  betas_horvath,
+  file="betas_horvath.csv",
+  row.names=FALSE,
+  quote=FALSE
+)
+
+pheno_horvath <- data.frame(
+  'Sex' = pd$Sex,
+  'Age' = pd$Age,
+  'Tissue' = pd$Tissue
+)
+pheno_horvath['Female'] <- 1
+pheno_horvath[pheno_horvath$Sex == 'M', 'Female'] <- 0
+pheno_horvath$Age <- as.numeric(pheno_horvath$Age)
+rownames(pheno_horvath) <- rownames(pd)
+pheno_horvath <- data.frame(row.names(pheno_horvath), pheno_horvath[ ,!(names(pheno_horvath) %in% c("Sex"))])
+colnames(pheno_horvath)[1] <- "Sample_Name"
+write.csv(
+  pheno_horvath,
+  file="pheno_horvath.csv",
+  row.names=FALSE,
+  quote=FALSE
+)
+
+###############################################
+# DunedinPACE
+###############################################
+pace <- PACEProjector(betas)
+pd['DunedinPACE'] <- pace$DunedinPACE
 
 ###############################################
 # Save modified pheno
 ###############################################
-write.csv(myLoad$pd, file = "pheno.csv")
-
-###############################################
-# Create harmonization reference
-###############################################
-mvals <- logit2(myNorm)
-mvals <- data.frame(rownames(mvals), mvals)
-colnames(mvals)[1] <- "ID_REF"
-mvals_norm <- regRCPqn(M_data=mvals, ref_path=path_harm_ref, data_name=dataset, save_ref=TRUE)
+write.csv(pd, file = "pheno.csv")

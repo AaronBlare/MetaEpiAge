@@ -59,7 +59,7 @@ myLoad <- champ.load(
   filterXY = FALSE,
   force = TRUE
 )
-pd <-  as.data.frame(myLoad$pd)
+pd <- as.data.frame(myLoad$pd)
 
 ###############################################
 # Functional normalization
