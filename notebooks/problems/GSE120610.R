@@ -9,67 +9,71 @@ BiocManager::install("ChAMP")
 BiocManager::install("methylGSA")
 BiocManager::install("preprocessCore")
 install.packages("devtools")
+install.packages("splitstackshape")
 devtools::install_github("danbelsky/DunedinPACE")
 devtools::install_github("https://github.com/regRCPqn/regRCPqn")
 library("ChAMP")
 library("preprocessCore")
 library("DunedinPACE")
 library("regRCPqn")
-
+library(readxl)
+library(splitstackshape)
+library("reticulate")
+pandas <- import("pandas")
 
 ###############################################
 # Setting variables
 ###############################################
-dataset <- 'GSE87571'
-arraytype <- '450K'
+dataset <- 'GSE120610'
+arraytype <- 'EPIC'
+
+dataset_ref <- 'GSE87571'
 
 ###############################################
 # Setting path
-# Directory must contain *.idat files and *.csv file with phenotype
 ###############################################
-path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE87571/raw/idat"
-path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL23976/GSE120610/raw"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
 path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
-path_work <- path_data
+path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_work <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/problems/GSE120610"
 setwd(path_work)
 
 ###############################################
-# Import and filtration
+# Load annotations
 ###############################################
-myLoad <- champ.load(
-  directory = path_data,
-  arraytype = arraytype,
-  method = "minfi",
-  methValue = "B",
-  autoimpute = TRUE,
-  filterDetP = TRUE,
-  ProbeCutoff = 0.1,
-  SampleCutoff = 0.1,
-  detPcut = 0.01,
-  filterBeads = FALSE,
-  beadCutoff = 0.05,
-  filterNoCG = FALSE,
-  filterSNPs = FALSE,
-  filterMultiHit = FALSE,
-  filterXY = FALSE,
-  force = TRUE
-)
-pd <-  as.data.frame(myLoad$pd)
+ann450k <- getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 
 ###############################################
-# Functional normalization
+# Import data
 ###############################################
-betas <- getBeta(preprocessFunnorm(myLoad$rgSet))
+pd <- as.data.frame(read_excel(paste(path_data,"/controls.xlsx", sep="")))
+pd$description <- gsub(" ","", as.character(pd$description))
+rownames(pd) <- pd$description
+data <- as.data.frame(read.csv(paste(path_data,"/GSE120610_Matrix_processed.csv", sep="")))
+rownames(data) <- data$ID_REF
+col_odd <- seq_len(ncol(data)) %% 2
+betas <- data[ , col_odd == 0]
+pvals <- data[ , col_odd == 1]
+pvals <- subset(pvals, select = -ID_REF)
+colnames(pvals) <- colnames(betas)
+missed_in_betas <- setdiff(row.names(pd), colnames(betas))
+missed_in_pheno <- setdiff(colnames(betas), row.names(pd))
+betas <- betas[, rownames(pd)]
+pvals <- pvals[, rownames(pd)]
 
 ###############################################
-# Create harmonization reference
+# Detection p-value analysis
 ###############################################
-mvals <- logit2(betas)
-mvals <- data.frame(rownames(mvals), mvals)
-colnames(mvals)[1] <- "ID_REF"
-mvals <- regRCPqn(M_data=mvals, ref_path=path_harm_ref, data_name=dataset, save_ref=TRUE)
-betas <- ilogit2(mvals)
+max_pval <- max(pvals, na.rm=TRUE)
+rowname_max <- rownames(pvals)[which(pvals == max(pvals), arr.ind = TRUE)[ , 1]]
+colname_max <- colnames(pvals)[which(pvals == max(pvals), arr.ind = TRUE)[ , 2]]
+max_pval_check <- pvals[rowname_max, colname_max]
+
+pval_above <- rowSums(pvals > 0.01)
+
+cpgs_common <- intersect(rownames(betas), rownames(ann450k))
+betas <- betas[cpgs_common, ]
 
 ###############################################
 # PC clocks
@@ -145,14 +149,3 @@ write.csv(
   row.names=FALSE,
   quote=FALSE
 )
-
-###############################################
-# DunedinPACE
-###############################################
-pace <- PACEProjector(betas)
-pd['DunedinPACE'] <- pace$DunedinPACE
-
-###############################################
-# Save modified pheno
-###############################################
-write.csv(pd, file = "pheno.csv")
