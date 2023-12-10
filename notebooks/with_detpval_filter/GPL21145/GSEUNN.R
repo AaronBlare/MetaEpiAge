@@ -9,29 +9,39 @@ BiocManager::install("ChAMP")
 BiocManager::install("methylGSA")
 BiocManager::install("preprocessCore")
 install.packages("devtools")
+install.packages("splitstackshape")
 devtools::install_github("danbelsky/DunedinPACE")
 devtools::install_github("https://github.com/regRCPqn/regRCPqn")
 library("ChAMP")
 library("preprocessCore")
 library("DunedinPACE")
 library("regRCPqn")
+library(readxl)
+library(splitstackshape)
+
 
 ###############################################
 # Setting variables
 ###############################################
-dataset <- 'GSE87571'
-arraytype <- '450K'
+dataset <- 'GSEUNN'
+arraytype <- 'EPIC'
+
+dataset_ref <- 'GSE87571'
 
 ###############################################
 # Setting path
-# Directory must contain *.idat files and *.csv file with phenotype
 ###############################################
-path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE87571/raw/idat"
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL21145/GSEUNN/special/026_data_for_GEO/idat"
 path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
 path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/with_detpval_filter_without_regRCPqn/GPL13534/GSE87571/"
 path_work <- path_data
 setwd(path_work)
+
+###############################################
+# Load annotations
+###############################################
+ann450k <- getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 
 ###############################################
 # Import and filtration
@@ -54,7 +64,7 @@ myLoad <- champ.load(
   filterXY = FALSE,
   force = TRUE
 )
-pd <-  as.data.frame(myLoad$pd)
+pd <- as.data.frame(myLoad$pd)
 
 ###############################################
 # Functional normalization
@@ -68,12 +78,31 @@ detected_cpgs <- intersect(rownames(myLoad$beta), rownames(betas))
 betas <- betas[detected_cpgs, ]
 
 ###############################################
-# Create harmonization reference
+# Combat
+###############################################
+pd$Region <- as.factor(pd$Region)
+pd$Slide <- as.factor(pd$Slide)
+pd$Array <- as.factor(pd$Array)
+harm <- champ.runCombat(
+  beta = betas,
+  pd = pd,
+  variablename = c("Age"),
+  batchname = c("Slide", "Array"),
+  logitTrans = TRUE
+)
+betas <- harm
+
+cpgs_common <- intersect(rownames(betas), rownames(ann450k))
+betas <- betas[cpgs_common, ]
+rm(myLoad)
+
+###############################################
+# Harmonization
 ###############################################
 mvals <- logit2(betas)
 mvals <- data.frame(rownames(mvals), mvals)
 colnames(mvals)[1] <- "ID_REF"
-mvals <- regRCPqn(M_data=mvals, ref_path=path_harm_ref, data_name=dataset, save_ref=TRUE)
+mvals <- regRCPqnREF(M_data=mvals, ref_path=path_harm_ref, data_name=dataset_ref)
 betas <- ilogit2(mvals)
 
 ###############################################
