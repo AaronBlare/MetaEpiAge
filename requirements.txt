@@ -13,6 +13,7 @@ plotly
 matplotlib
 statannotations
 patchworklib
+d3blocks
 
 # Utils ===================================================================== #
 tqdm
