@@ -10,6 +10,7 @@ BiocManager::install("methylGSA")
 BiocManager::install("preprocessCore")
 install.packages("devtools")
 install.packages("splitstackshape")
+install.packages('reticulate')
 devtools::install_github("danbelsky/DunedinPACE@d8b5365")
 devtools::install_github("https://github.com/regRCPqn/regRCPqn")
 library("ChAMP")
@@ -18,12 +19,13 @@ library("DunedinPACE")
 library("regRCPqn")
 library(readxl)
 library(splitstackshape)
-
+library("reticulate")
+pandas <- import("pandas")
 
 ###############################################
 # Setting variables
 ###############################################
-dataset <- 'GSE143157'
+dataset <- 'GSE114134'
 arraytype <- 'EPIC'
 
 dataset_ref <- 'GSE87571'
@@ -31,48 +33,22 @@ dataset_ref <- 'GSE87571'
 ###############################################
 # Setting path
 ###############################################
-path_data <- "E:/YandexDisk/pydnameth/datasets/GPL21145/GSE143157/raw/idat"
-path_pc_clocks <- "E:/YandexDisk/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_data <- "E:/YandexDisk/pydnameth/datasets/GPL23976/GSE114134/raw"
 path_horvath <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
 path_harm_ref <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
-path_work <- path_data
+path_pc_clocks <- "E:/YandexDisk/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_work <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL23976/GSE114134"
 setwd(path_work)
 
 ###############################################
-# Load annotations
+# Import data
 ###############################################
-ann450k <- getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19)
-
-###############################################
-# Import and filtration
-###############################################
-myLoad <- champ.load(
-  directory = path_data,
-  arraytype = arraytype,
-  method = "minfi",
-  methValue = "B",
-  autoimpute = TRUE,
-  filterDetP = TRUE,
-  ProbeCutoff = 0.1,
-  SampleCutoff = 0.1,
-  detPcut = 0.01,
-  filterBeads = FALSE,
-  beadCutoff = 0.05,
-  filterNoCG = FALSE,
-  filterSNPs = FALSE,
-  filterMultiHit = FALSE,
-  filterXY = FALSE,
-  force = TRUE
-)
-pd <- as.data.frame(myLoad$pd)
-
-###############################################
-# Functional normalization
-###############################################
-betas <- getBeta(preprocessFunnorm(myLoad$rgSet))
-cpgs_common <- intersect(rownames(betas), rownames(ann450k))
-betas <- betas[cpgs_common, ]
-rm(myLoad)
+pd <- as.data.frame(read_excel(paste(path_data,"/controls.xlsx", sep="")))
+row.names(pd) <- pd$gsm
+betas <- pandas$read_pickle(paste(path_data, "/betas.pkl", sep=''))
+missed_in_betas <- setdiff(row.names(pd), colnames(betas))
+missed_in_pheno <- setdiff(colnames(betas), row.names(pd))
+betas <- betas[, row.names(pd)]
 
 ###############################################
 # Harmonization
@@ -83,7 +59,7 @@ colnames(mvals)[1] <- "ID_REF"
 mvals <- regRCPqnREF(M_data=mvals, ref_path=path_harm_ref, data_name=dataset_ref)
 betas <- ilogit2(mvals)
 
-path_work <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL21145/GSE143157"
+path_work <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL23976/GSE114134"
 setwd(path_work)
 
 ###############################################

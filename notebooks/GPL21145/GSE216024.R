@@ -23,7 +23,7 @@ library(splitstackshape)
 ###############################################
 # Setting variables
 ###############################################
-dataset <- 'GSE143157'
+dataset <- 'GSE216024'
 arraytype <- 'EPIC'
 
 dataset_ref <- 'GSE87571'
@@ -31,7 +31,7 @@ dataset_ref <- 'GSE87571'
 ###############################################
 # Setting path
 ###############################################
-path_data <- "E:/YandexDisk/pydnameth/datasets/GPL21145/GSE143157/raw/idat"
+path_data <- "E:/YandexDisk/pydnameth/datasets/GPL21145/GSE216024/raw/idat"
 path_pc_clocks <- "E:/YandexDisk/pydnameth/datasets/lists/cpgs/PC_clocks/"
 path_horvath <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
 path_harm_ref <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
@@ -83,7 +83,7 @@ colnames(mvals)[1] <- "ID_REF"
 mvals <- regRCPqnREF(M_data=mvals, ref_path=path_harm_ref, data_name=dataset_ref)
 betas <- ilogit2(mvals)
 
-path_work <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL21145/GSE143157"
+path_work <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL21145/GSE216024"
 setwd(path_work)
 
 ###############################################
