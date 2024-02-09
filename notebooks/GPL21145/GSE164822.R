@@ -28,16 +28,16 @@ pandas <- import("pandas")
 dataset <- 'GSE164822'
 arraytype <- 'EPIC'
 
-dataset_ref <- 'GSE87571'
+dataset_ref <- 'GSE74193'
 
 ###############################################
 # Setting path
 ###############################################
-path_data <- "E:/YandexDisk/pydnameth/datasets/GPL21145/GSE164822/raw"
-path_horvath <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
-path_harm_ref <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
-path_pc_clocks <- "E:/YandexDisk/pydnameth/datasets/lists/cpgs/PC_clocks/"
-path_work <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL21145/GSE164822"
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL21145/GSE164822/raw"
+path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
+path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE74193/"
+path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_work <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL21145/GSE164822"
 setwd(path_work)
 
 ###############################################

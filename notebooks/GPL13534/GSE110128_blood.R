@@ -41,7 +41,7 @@ setwd(path_work)
 ###############################################
 # Import data
 ###############################################
-pd <- as.data.frame(read_excel(paste(path_data,"/controls.xlsx", sep="")))
+pd <- as.data.frame(read_excel(paste(path_data,"/controls_blood.xlsx", sep="")))
 sentrixids <- cSplit(pd, "title", ": ")
 pd$sentrixids <- sentrixids$title_1
 pd$sentrixids <- gsub(" ",".", as.character(pd$sentrixids))

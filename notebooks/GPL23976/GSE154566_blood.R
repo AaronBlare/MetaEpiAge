@@ -47,7 +47,7 @@ ann450k <- getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 ###############################################
 # Import data
 ###############################################
-pd <- as.data.frame(read_excel(paste(path_data,"/controls.xlsx", sep="")))
+pd <- as.data.frame(read_excel(paste(path_data,"/controls_blood.xlsx", sep="")))
 pd$index <- paste(pd$Sentrix_ID, "_", pd$Sentrix_Position, sep='')
 rownames(pd) <- pd$index
 betas <- pandas$read_pickle(paste(path_data, "/betas.pkl", sep=''))
