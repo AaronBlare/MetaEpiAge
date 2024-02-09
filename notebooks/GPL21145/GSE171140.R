@@ -26,15 +26,13 @@ library(splitstackshape)
 dataset <- 'GSE171140'
 arraytype <- 'EPIC'
 
-dataset_ref <- 'GSE87571'
-
 ###############################################
 # Setting path
 ###############################################
-path_data <- "E:/YandexDisk/pydnameth/datasets/GPL21145/GSE171140/raw/idat"
-path_pc_clocks <- "E:/YandexDisk/pydnameth/datasets/lists/cpgs/PC_clocks/"
-path_horvath <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
-path_harm_ref <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL21145/GSE171140/raw/idat"
+path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
+path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL21145/GSE171140/"
 path_work <- path_data
 setwd(path_work)
 
@@ -80,10 +78,10 @@ rm(myLoad)
 mvals <- logit2(betas)
 mvals <- data.frame(rownames(mvals), mvals)
 colnames(mvals)[1] <- "ID_REF"
-mvals <- regRCPqnREF(M_data=mvals, ref_path=path_harm_ref, data_name=dataset_ref)
+mvals <- regRCPqn(M_data=mvals, ref_path=path_harm_ref, data_name=dataset, save_ref=TRUE)
 betas <- ilogit2(mvals)
 
-path_work <- "E:/YandexDisk/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL21145/GSE171140"
+path_work <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL21145/GSE171140"
 setwd(path_work)
 
 ###############################################

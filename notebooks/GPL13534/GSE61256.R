@@ -28,14 +28,12 @@ pandas <- import("pandas")
 dataset <- 'GSE61256'
 arraytype <- '450K'
 
-dataset_ref <- 'GSE87571'
-
 ###############################################
 # Setting path
 ###############################################
 path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE61256/raw"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
-path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
+path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE61256/"
 path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
 path_work <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE61256"
 setwd(path_work)
@@ -56,7 +54,7 @@ betas <- betas[, row.names(pd)]
 mvals <- logit2(betas)
 mvals <- data.frame(rownames(mvals), mvals)
 colnames(mvals)[1] <- "ID_REF"
-mvals <- regRCPqnREF(M_data=mvals, ref_path=path_harm_ref, data_name=dataset_ref)
+mvals <- regRCPqn(M_data=mvals, ref_path=path_harm_ref, data_name=dataset, save_ref=TRUE)
 betas <- ilogit2(mvals)
 
 ###############################################
