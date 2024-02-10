@@ -10,7 +10,8 @@ BiocManager::install("methylGSA")
 BiocManager::install("preprocessCore")
 install.packages("devtools")
 install.packages("splitstackshape")
-devtools::install_github("danbelsky/DunedinPACE")
+library("devtools")
+devtools::install_github("danbelsky/DunedinPACE@d8b5365")
 devtools::install_github("https://github.com/regRCPqn/regRCPqn")
 library("ChAMP")
 library("preprocessCore")
@@ -19,10 +20,11 @@ library("regRCPqn")
 library(readxl)
 library(splitstackshape)
 
+
 ###############################################
 # Setting variables
 ###############################################
-dataset <- 'GSE201872'
+dataset <- 'GSE124366'
 arraytype <- '450K'
 
 dataset_ref <- 'GSE137688'
@@ -30,7 +32,7 @@ dataset_ref <- 'GSE137688'
 ###############################################
 # Setting path
 ###############################################
-path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE201872/raw/idat"
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE124366/raw/idat"
 path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
 path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE137688/"

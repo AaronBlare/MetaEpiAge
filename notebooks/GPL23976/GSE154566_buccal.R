@@ -18,52 +18,44 @@ library("DunedinPACE")
 library("regRCPqn")
 library(readxl)
 library(splitstackshape)
+library("reticulate")
+pandas <- import("pandas")
 
 ###############################################
 # Setting variables
 ###############################################
-dataset <- 'GSE201872'
-arraytype <- '450K'
+dataset <- 'GSE154566'
+arraytype <- 'EPIC'
 
 dataset_ref <- 'GSE137688'
 
 ###############################################
 # Setting path
 ###############################################
-path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE201872/raw/idat"
-path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL23976/GSE154566/raw"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
 path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE137688/"
-path_work <- path_data
+path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_work <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL23976/GSE154566"
 setwd(path_work)
 
 ###############################################
-# Import and filtration
+# Load annotations
 ###############################################
-myLoad <- champ.load(
-  directory = path_data,
-  arraytype = arraytype,
-  method = "minfi",
-  methValue = "B",
-  autoimpute = TRUE,
-  filterDetP = TRUE,
-  ProbeCutoff = 0.1,
-  SampleCutoff = 0.1,
-  detPcut = 0.01,
-  filterBeads = FALSE,
-  beadCutoff = 0.05,
-  filterNoCG = FALSE,
-  filterSNPs = FALSE,
-  filterMultiHit = FALSE,
-  filterXY = FALSE,
-  force = TRUE
-)
-pd <- as.data.frame(myLoad$pd)
+ann450k <- getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 
 ###############################################
-# Functional normalization
+# Import data
 ###############################################
-betas <- getBeta(preprocessFunnorm(myLoad$rgSet))
+pd <- as.data.frame(read_excel(paste(path_data,"/controls_buccal.xlsx", sep="")))
+pd$index <- paste(pd$Sentrix_ID, "_", pd$Sentrix_Position, sep='')
+rownames(pd) <- pd$index
+betas <- pandas$read_pickle(paste(path_data, "/betas.pkl", sep=''))
+missed_in_betas <- setdiff(row.names(pd), colnames(betas))
+missed_in_pheno <- setdiff(colnames(betas), row.names(pd))
+common_samples <- intersect(colnames(betas), row.names(pd))
+pd <- pd[common_samples, ]
+betas <- betas[, rownames(pd)]
 
 ###############################################
 # Harmonization
@@ -73,6 +65,7 @@ mvals <- data.frame(rownames(mvals), mvals)
 colnames(mvals)[1] <- "ID_REF"
 mvals <- regRCPqnREF(M_data=mvals, ref_path=path_harm_ref, data_name=dataset_ref)
 betas <- ilogit2(mvals)
+rownames(pd) <- paste0('X', rownames(pd))
 
 ###############################################
 # PC clocks

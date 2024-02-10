@@ -26,14 +26,14 @@ library(splitstackshape)
 dataset <- 'GSE137903'
 arraytype <- '450K'
 
-dataset_ref <- 'GSE87571'
+dataset_ref <- 'GSE137688'
 
 ###############################################
 # Setting path
 ###############################################
 path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE137903/raw"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
-path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE87571/"
+path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE137688/"
 path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
 path_work <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE137903"
 setwd(path_work)
