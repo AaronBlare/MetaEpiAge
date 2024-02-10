@@ -23,46 +23,36 @@ library(splitstackshape)
 ###############################################
 # Setting variables
 ###############################################
-dataset <- 'GSE111223'
+dataset <- 'GSE110128'
 arraytype <- '450K'
+
+dataset_ref <- 'GSE111223'
 
 ###############################################
 # Setting path
 ###############################################
-path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE111223/raw/idat"
-path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_data <- "D:/YandexDisk/Work/pydnameth/datasets/GPL13534/GSE110128/raw"
 path_horvath <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge"
 path_harm_ref <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE111223/"
-path_work <- path_data
+path_pc_clocks <- "D:/YandexDisk/Work/pydnameth/datasets/lists/cpgs/PC_clocks/"
+path_work <- "D:/YandexDisk/Work/pydnameth/draft/10_MetaEPIClock/MetaEpiAge/GPL13534/GSE110128"
 setwd(path_work)
 
 ###############################################
-# Import and filtration
+# Import data
 ###############################################
-myLoad <- champ.load(
-  directory = path_data,
-  arraytype = arraytype,
-  method = "minfi",
-  methValue = "B",
-  autoimpute = TRUE,
-  filterDetP = TRUE,
-  ProbeCutoff = 0.1,
-  SampleCutoff = 0.1,
-  detPcut = 0.01,
-  filterBeads = FALSE,
-  beadCutoff = 0.05,
-  filterNoCG = FALSE,
-  filterSNPs = FALSE,
-  filterMultiHit = FALSE,
-  filterXY = FALSE,
-  force = TRUE
-)
-pd <- as.data.frame(myLoad$pd)
-
-###############################################
-# Functional normalization
-###############################################
-betas <- getBeta(preprocessFunnorm(myLoad$rgSet))
+pd <- as.data.frame(read_excel(paste(path_data,"/controls_blood.xlsx", sep="")))
+sentrixids <- cSplit(pd, "title", ": ")
+pd$sentrixids <- sentrixids$title_1
+pd$sentrixids <- gsub(" ",".", as.character(pd$sentrixids))
+row.names(pd) <- pd$sentrixids
+betas <- as.data.frame(read.table(paste(path_data,"/GSE110128_matrix_processed.txt", sep=""), header=TRUE))
+rownames(betas) <- betas$ID_REF
+col_odd <- seq_len(ncol(betas)) %% 2
+betas <- betas[ , col_odd == 0]
+missed_in_betas <- setdiff(row.names(pd), colnames(betas))
+missed_in_pheno <- setdiff(colnames(betas), row.names(pd))
+betas <- betas[, row.names(pd)]
 
 ###############################################
 # Harmonization
@@ -70,7 +60,7 @@ betas <- getBeta(preprocessFunnorm(myLoad$rgSet))
 mvals <- logit2(betas)
 mvals <- data.frame(rownames(mvals), mvals)
 colnames(mvals)[1] <- "ID_REF"
-mvals <- regRCPqn(M_data=mvals, ref_path=path_harm_ref, data_name=dataset, save_ref=TRUE)
+mvals <- regRCPqnREF(M_data=mvals, ref_path=path_harm_ref, data_name=dataset_ref)
 betas <- ilogit2(mvals)
 
 ###############################################
